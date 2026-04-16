@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -325,7 +326,7 @@ fun calcularTiempoTrayecto(context: Context, direccion: String, onResult: (Strin
                     val c = 2 * atan2(sqrt(a), sqrt(1 - a))
                     onResult("${(6371.0 * c * 4).roundToInt()} min")
                 } else onResult("-- min")
-            } catch (e: Exception) { onResult("Calculando...") }
+            } catch (e: Exception) { onResult("Err") }
         } else onResult("No GPS")
     }
 }
