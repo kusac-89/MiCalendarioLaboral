@@ -8,12 +8,13 @@ plugins {
 kotlin {
     androidTarget()
     
+    // Configuración para iPhone
     listOf(
         iosX64(),
         iosArm64(),
         iosSimulatorArm64()
-    ).forEach {
-        it.binaries.framework {
+    ).forEach { iosTarget ->
+        iosTarget.binaries.framework {
             baseName = "shared"
             isStatic = true
         }
@@ -22,7 +23,7 @@ kotlin {
     sourceSets {
         commonMain.dependencies {
             implementation(libs.multiplatform.settings)
-            // Usamos las dependencias de Compose Multiplatform reales
+            // Dependencias de Compose Multiplatform
             implementation(compose.runtime)
             implementation(compose.foundation)
             implementation(compose.material3)
