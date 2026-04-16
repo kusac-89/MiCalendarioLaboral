@@ -1,0 +1,30 @@
+{
+  "project_info": {
+    "project_number": "18513479288",
+    "firebase_url": "https://parking-team-89394-default-rtdb.firebaseio.com",
+    "project_id": "parking-team-89394",
+    "storage_bucket": "parking-team-89394.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:18513479288:android:c578e026e1a2274ff20f8d",
+        "android_client_info": {
+          "package_name": "com.example.micalendariolaboral"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBIBXcIC-OOMIHnP2gNPKeiGdnXc6G7OvM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
