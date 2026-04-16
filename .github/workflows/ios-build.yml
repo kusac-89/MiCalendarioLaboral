@@ -19,9 +19,8 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v3
 
-      # ESTA ES LA LÍNEA MÁGICA QUE ARREGLA EL ERROR
       - name: Give execute permission to gradlew
         run: chmod +x gradlew
 
       - name: Build iOS Framework
-        run: ./gradlew :shared:assembleSharedReleaseFramework
+        run: ./gradlew :shared:linkReleaseFrameworkIosArm64
