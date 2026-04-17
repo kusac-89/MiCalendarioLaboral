@@ -23,10 +23,10 @@ jobs:
         run: chmod +x gradlew
 
       - name: Build iOS Framework
-        run: ./gradlew :shared:linkReleaseFrameworkIosSimulatorArm64
+        run: ./gradlew :shared:linkReleaseFrameworkIosArm64
 
       - name: Upload Framework Artifact
         uses: actions/upload-artifact@v4
         with:
           name: shared-framework
-          path: shared/build/bin/iosSimulatorArm64/releaseFramework/shared.framework
+          path: shared/build/bin/iosArm64/releaseFramework/shared.framework
