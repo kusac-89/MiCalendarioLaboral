@@ -8,7 +8,6 @@ plugins {
 kotlin {
     androidTarget()
     
-    // Configuración para iPhone
     listOf(
         iosX64(),
         iosArm64(),
@@ -23,7 +22,9 @@ kotlin {
     sourceSets {
         commonMain.dependencies {
             implementation(libs.multiplatform.settings)
-            // Dependencias de Compose Multiplatform
+            // ESTA ES LA PIEZA QUE FALTABA MONTAR:
+            implementation(libs.kotlinx.datetime)
+
             implementation(compose.runtime)
             implementation(compose.foundation)
             implementation(compose.material3)

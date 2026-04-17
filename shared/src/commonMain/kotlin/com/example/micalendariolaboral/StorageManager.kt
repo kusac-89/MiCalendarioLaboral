@@ -1,13 +1,8 @@
 package com.example.micalendariolaboral
 
 import com.russhwolf.settings.Settings
-import com.russhwolf.settings.SharedPreferencesSettings
-import android.content.Context
 
-class StorageManager(context: Context) {
-    private val sharedPrefs = context.getSharedPreferences("AgendaLaboral", Context.MODE_PRIVATE)
-    private val settings: Settings = SharedPreferencesSettings(sharedPrefs)
-
+class StorageManager(private val settings: Settings) {
     fun saveUserName(name: String) = settings.putString("nombre_usuario", name)
     fun getUserName(): String? = settings.getStringOrNull("nombre_usuario")
 
@@ -29,5 +24,4 @@ class StorageManager(context: Context) {
     }
 
     fun removeNote(day: String) = settings.remove("nota_$day")
-    fun getAll(): Map<String, *> = sharedPrefs.all
 }

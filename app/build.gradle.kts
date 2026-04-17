@@ -41,6 +41,9 @@ android {
 }
 
 dependencies {
+    // Conectamos el cerebro compartido con la app de Android
+    implementation(project(":shared"))
+
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)
     implementation(libs.material)
@@ -65,6 +68,4 @@ dependencies {
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
-    
-    // HEMOS ELIMINADO: material-calendarview
 }
