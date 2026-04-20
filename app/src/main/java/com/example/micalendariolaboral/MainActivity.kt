@@ -42,7 +42,8 @@ class MainActivity : ComponentActivity() {
         
         // Inicializamos el StorageManager compartido
         storage = StorageManager(settings)
-        database = FirebaseDatabase.getInstance().reference.child("teletrabajo")
+        val firebaseUrl = "https://parking-team-89394-default-rtdb.firebaseio.com/"
+        database = FirebaseDatabase.getInstance(firebaseUrl).reference.child("teletrabajo")
         reminderManager = AndroidReminderManager(this)
 
         setContent {
