@@ -1,32 +1,25 @@
 package com.example.micalendariolaboral
 
-import android.Manifest
 import android.annotation.SuppressLint
 import android.app.TimePickerDialog
 import android.content.Context
 import android.content.Intent
-import android.content.pm.PackageManager
 import android.location.Geocoder
 import android.net.Uri
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.runtime.*
-import androidx.core.content.ContextCompat
 import com.google.android.gms.location.LocationServices
 import com.google.firebase.database.*
 import com.russhwolf.settings.SharedPreferencesSettings
 import kotlinx.coroutines.delay
 import java.time.LocalDate
-import java.time.format.DateTimeFormatter
 import java.util.*
 import kotlin.math.*
 
-// IMPORTANTE: Usamos el StorageManager compartido
 import com.example.micalendariolaboral.App
 import com.example.micalendariolaboral.StorageManager
-
-fun getStorageKeyShared(fecha: String): String = fecha // Simplificado para consistencia
 
 class MainActivity : ComponentActivity() {
     
@@ -40,7 +33,6 @@ class MainActivity : ComponentActivity() {
         val sharedPrefs = getSharedPreferences("AgendaLaboral", Context.MODE_PRIVATE)
         val settings = SharedPreferencesSettings(sharedPrefs)
         
-        // Inicializamos el StorageManager compartido
         storage = StorageManager(settings)
         val firebaseUrl = "https://parking-team-89394-default-rtdb.firebaseio.com/"
         database = FirebaseDatabase.getInstance(firebaseUrl).reference.child("teletrabajo")
@@ -48,8 +40,12 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             var teletrabajadores by remember { mutableStateOf(listOf<String>()) }
+            var todosLosMiembros by remember { mutableStateOf(listOf<String>()) }
+            var ultimoAviso by remember { mutableStateOf<String?>(null) }
             var tiempoEstimado by remember { mutableStateOf("Calculando...") }
             var ciudadActual by remember { mutableStateOf(storage.getCity() ?: "Ubicación") }
+            var climaTemp by remember { mutableStateOf(storage.getNote("temp_cache") ?: "22°C") }
+            var climaIcon by remember { mutableStateOf(storage.getNote("icon_cache") ?: "☀️") }
             val selectedDateState = remember { mutableStateOf(LocalDate.now()) }
 
             App(
@@ -61,18 +57,62 @@ class MainActivity : ComponentActivity() {
                 },
                 onDeleteReminder = { fechaStr -> reminderManager.cancelReminder(fechaStr.hashCode()) },
                 onUpdateStatus = { fechaStr, estado ->
-                    val fecha = LocalDate.parse(fechaStr)
-                    actualizarEstadoFirebase(fecha, estado)
+                    when (fechaStr) {
+                        "register" -> {
+                            val name = estado
+                            FirebaseDatabase.getInstance().reference.child("miembros").child(name).child("lastSeen").setValue(System.currentTimeMillis())
+                            // Notificar registro
+                            FirebaseDatabase.getInstance().reference.child("avisos").setValue("$name se ha unido al equipo")
+                        }
+                        "unregister" -> {
+                            val name = storage.getUserName() ?: ""
+                            if (name.isNotBlank()) {
+                                FirebaseDatabase.getInstance().reference.child("miembros").child(name).removeValue()
+                                // Notificar baja
+                                FirebaseDatabase.getInstance().reference.child("avisos").setValue("$name ha dejado el equipo")
+                                storage.saveUserName("")
+                            }
+                        }
+                        else -> {
+                            val fecha = LocalDate.parse(fechaStr)
+                            actualizarEstadoFirebase(fecha, estado)
+                        }
+                    }
                 },
                 onDateSelected = { fechaStr ->
                     selectedDateState.value = LocalDate.parse(fechaStr)
                 },
                 teletrabajadores = teletrabajadores,
+                todosLosMiembros = todosLosMiembros,
+                ultimoAviso = ultimoAviso,
                 tiempoEstimado = tiempoEstimado,
-                ciudadActual = ciudadActual
+                ciudadActual = ciudadActual,
+                climaTemp = climaTemp,
+                climaIcon = climaIcon
             )
+
+            // Listener de AVISOS (Notificaciones)
+            LaunchedEffect(Unit) {
+                FirebaseDatabase.getInstance().reference.child("avisos").addValueEventListener(object : ValueEventListener {
+                    override fun onDataChange(snapshot: DataSnapshot) {
+                        val aviso = snapshot.getValue(String::class.java)
+                        if (aviso != null) {
+                            ultimoAviso = aviso
+                        }
+                    }
+                    override fun onCancelled(error: DatabaseError) {}
+                })
+            }
+
+            // Temporizador para ocultar el aviso
+            LaunchedEffect(ultimoAviso) {
+                if (ultimoAviso != null) {
+                    delay(5000)
+                    ultimoAviso = null
+                }
+            }
             
-            // Escuchador de Firebase para sincronización grupal
+            // Listener de Teletrabajadores del día
             LaunchedEffect(selectedDateState.value) {
                 val storageKey = selectedDateState.value.toString()
                 database.child(storageKey).addValueEventListener(object : ValueEventListener {
@@ -85,22 +125,63 @@ class MainActivity : ComponentActivity() {
                 })
             }
 
-            // GPS y Trayecto
+            // Listener Global de MIEMBROS (EQUIPO)
+            LaunchedEffect(Unit) {
+                // AUTO-REGISTRO: Si ya tenemos nombre, actualizamos su última conexión
+                storage.getUserName()?.let { name ->
+                    if (name.isNotBlank()) {
+                        FirebaseDatabase.getInstance().reference.child("miembros").child(name).child("lastSeen").setValue(System.currentTimeMillis())
+                    }
+                }
+
+                FirebaseDatabase.getInstance().reference.child("miembros").addValueEventListener(object : ValueEventListener {
+                    override fun onDataChange(snapshot: DataSnapshot) {
+                        val list = mutableListOf<String>()
+                        val ahora = System.currentTimeMillis()
+                        val limiteInactividad = 10L * 24 * 60 * 60 * 1000 // Reducido a 10 días
+
+                        for (userSnapshot in snapshot.children) {
+                            val name = userSnapshot.key ?: continue
+                            val lastSeen = userSnapshot.child("lastSeen").getValue(Long::class.java) ?: 0L
+                            
+                            // Solo añadimos si ha estado activo en los últimos 10 días
+                            if (ahora - lastSeen < limiteInactividad) {
+                                list.add(name)
+                            }
+                        }
+                        todosLosMiembros = list.filter { it.isNotBlank() }.sorted()
+                    }
+                    override fun onCancelled(error: DatabaseError) {}
+                })
+            }
+
+            // GPS, Trayecto y Clima
             LaunchedEffect(Unit) {
                 obtenerCiudadGps(this@MainActivity) { ciudad ->
                     ciudadActual = ciudad
-                    storage.saveCity(ciudad) // Guardamos para la próxima vez
+                    storage.saveCity(ciudad)
                 }
                 while(true) {
                     val address = storage.getOfficeAddress()
                     if (address != null) {
-                        calcularTiempoTrayecto(this@MainActivity, address) { tiempo -> 
-                            tiempoEstimado = tiempo 
-                        }
-                    } else {
-                        tiempoEstimado = "Sin oficina"
+                        calcularTiempoTrayecto(this@MainActivity, address) { tiempo -> tiempoEstimado = tiempo }
                     }
-                    delay(600000) // Cada 10 min
+                    
+                    // Reintento del clima si falla
+                    var climaObtenido = false
+                    while(!climaObtenido) {
+                        obtenerClimaReal(this@MainActivity) { temp, icon ->
+                            if (temp != "--°C") {
+                                climaTemp = temp
+                                climaIcon = icon
+                                storage.saveNote("temp_cache", temp)
+                                storage.saveNote("icon_cache", icon)
+                                climaObtenido = true
+                            }
+                        }
+                        if (!climaObtenido) delay(10000) // Reintenta cada 10 seg si falla
+                    }
+                    delay(600000) // Una vez obtenido, espera 10 min para actualizar
                 }
             }
         }
@@ -109,14 +190,12 @@ class MainActivity : ComponentActivity() {
     private fun actualizarEstadoFirebase(fecha: LocalDate, estado: String) {
         val storageKey = fecha.toString()
         val user = storage.getUserName() ?: "Invitado"
-        
         when (estado) {
             "teletrabajo" -> {
                 database.child(storageKey).child(user).setValue(true)
                 storage.saveDayType(storageKey, "teletrabajo")
             }
             "festivo" -> {
-                // Si cambia a festivo, lo borramos de la lista de teletrabajo de los demás
                 database.child(storageKey).child(user).removeValue()
                 storage.saveDayType(storageKey, "festivo")
             }
@@ -135,9 +214,55 @@ class MainActivity : ComponentActivity() {
             reminderManager.scheduleReminder(fecha.hashCode(), mensaje, cal.timeInMillis)
         }, ahora.get(Calendar.HOUR_OF_DAY), ahora.get(Calendar.MINUTE), true).show()
     }
+
+    private fun obtenerClimaReal(context: Context, onResult: (String, String) -> Unit) {
+        val fusedLocationClient = LocationServices.getFusedLocationProviderClient(context)
+        try {
+            fusedLocationClient.lastLocation.addOnSuccessListener { loc ->
+                if (loc != null) {
+                    val url = "https://api.open-meteo.com/v1/forecast?latitude=${loc.latitude}&longitude=${loc.longitude}&current_weather=true"
+                    Thread {
+                        try {
+                            val response = java.net.URL(url).readText()
+                            // Extracción más segura buscando patrones numéricos
+                            val tempRegex = "\"temperature\":([0-9.-]+)".toRegex()
+                            val codeRegex = "\"weathercode\":([0-9]+)".toRegex()
+                            
+                            val tempMatch = tempRegex.find(response)
+                            val codeMatch = codeRegex.find(response)
+                            
+                            if (tempMatch != null && codeMatch != null) {
+                                val tempValue = tempMatch.groupValues[1].toDouble().roundToInt()
+                                val code = codeMatch.groupValues[1].toInt()
+                                
+                                val icon = when(code) {
+                                    0 -> "☀️"
+                                    1, 2, 3 -> "⛅"
+                                    45, 48 -> "🌫️"
+                                    51, 53, 55, 61, 63, 65 -> "🌧️"
+                                    71, 73, 75 -> "❄️"
+                                    95, 96, 99 -> "⛈️"
+                                    else -> "☁️"
+                                }
+                                runOnUiThread { onResult("$tempValue°C", icon) }
+                            } else {
+                                runOnUiThread { onResult("--°C", "☁️") }
+                            }
+                        } catch (e: Exception) { 
+                            runOnUiThread { onResult("--°C", "❓") } 
+                        }
+                    }.start()
+                } else {
+                    // Si no hay última localización, reintentamos con una petición fresca si fuera necesario
+                    onResult("--°C", "📍?") 
+                }
+            }
+        } catch (e: SecurityException) {
+            onResult("Err", "🔒")
+        }
+    }
 }
 
-// FUNCIONES AUXILIARES PARA ANDROID
 fun abrirGoogleMaps(context: Context, direccion: String) {
     val intent = Intent(Intent.ACTION_VIEW, Uri.parse("google.navigation:q=${Uri.encode(direccion)}")).setPackage("com.google.android.apps.maps")
     try { context.startActivity(intent) } catch (e: Exception) { 
@@ -171,11 +296,10 @@ fun calcularTiempoTrayecto(context: Context, direccion: String, onResult: (Strin
                     val a = sin(dLat / 2).pow(2) + cos(Math.toRadians(lat1)) * cos(Math.toRadians(lat2)) * sin(dLon / 2).pow(2)
                     val c = 2 * atan2(sqrt(a), sqrt(1 - a))
                     val distanciaKm = 6371.0 * c
-                    // Ajustamos el factor: 1.3 es aprox 45-50 km/h de media (más realista para ciudad/periferia)
-                    val tiempoEstimadoMin = (distanciaKm * 1.3).roundToInt() + 5 // +5 min por semáforos/aparcamiento
+                    val tiempoEstimadoMin = (distanciaKm * 1.3).roundToInt() + 5
                     onResult("$tiempoEstimadoMin min")
                 } else onResult("-- min")
             } catch (e: Exception) { onResult("Err") }
-        } else onResult("No GPS")
+        }
     }
 }

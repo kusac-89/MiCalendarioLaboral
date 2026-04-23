@@ -1,4 +1,4 @@
-name: Build iOS
+name: Build iOS IPA
 on:
   push:
     branches: [ master, main ]
@@ -22,11 +22,33 @@ jobs:
       - name: Give execute permission to gradlew
         run: chmod +x gradlew
 
-      - name: Build iOS Framework
-        run: ./gradlew :shared:linkReleaseFrameworkIosArm64
+      - name: Build KMP Shared Framework
+        run: ./gradlew :shared:assembleRelease
 
-      - name: Upload Framework Artifact
+      - name: Install CocoaPods
+        run: |
+          sudo gem install cocoapods
+          cd iosApp && pod install
+
+      - name: Build iOS App (.app)
+        run: |
+          xcodebuild -workspace iosApp/iosApp.xcworkspace \
+                     -scheme iosApp \
+                     -sdk iphoneos \
+                     -configuration Release \
+                     -derivedDataPath build \
+                     CODE_SIGN_IDENTITY="" \
+                     CODE_SIGNING_REQUIRED=NO \
+                     CODE_SIGNING_ALLOWED=NO
+
+      - name: Create Payload and ZIP to IPA
+        run: |
+          mkdir -p Payload
+          cp -r build/Build/Products/Release-iphoneos/iosApp.app Payload/
+          zip -r TeamParking.ipa Payload
+          
+      - name: Upload IPA Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: shared-framework
-          path: shared/build/bin/iosArm64/releaseFramework/shared.framework
+          name: TeamParking-iOS-IPA
+          path: TeamParking.ipa

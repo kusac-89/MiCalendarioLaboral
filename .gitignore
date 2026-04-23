@@ -13,3 +13,11 @@
 .externalNativeBuild
 .cxx
 local.properties
+
+# Kotlin Multiplatform
+.kotlin
+shared/build/
+app/build/
+build/
+*.class
+*.log
