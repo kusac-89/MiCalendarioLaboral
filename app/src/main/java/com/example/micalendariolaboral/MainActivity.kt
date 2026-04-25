@@ -95,11 +95,15 @@ class MainActivity : ComponentActivity() {
 
             // Listener de AVISOS (Notificaciones)
             LaunchedEffect(Unit) {
+                var esPrimeraCarga = true // Flag para ignorar el aviso antiguo al arrancar
                 FirebaseDatabase.getInstance().reference.child("avisos").addValueEventListener(object : ValueEventListener {
                     override fun onDataChange(snapshot: DataSnapshot) {
                         val aviso = snapshot.getValue(String::class.java)
                         if (aviso != null) {
-                            ultimoAviso = aviso
+                            if (!esPrimeraCarga) {
+                                ultimoAviso = aviso
+                            }
+                            esPrimeraCarga = false
                         }
                     }
                     override fun onCancelled(error: DatabaseError) {}
