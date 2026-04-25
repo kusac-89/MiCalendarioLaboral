@@ -4,7 +4,19 @@
 	classes = {};
 	objectVersion = 56;
 	objects = {
-		/* ... Archivo de configuración básica para KMP ... */
+		/* Objeto raíz mínimo para que Xcode lo reconozca */
+		00E21010214C7C570043329D /* Project object */ = {
+			isa = PBXProject;
+			attributes = { LastUpgradeCheck = 1420; };
+			buildConfigurationList = 00E21013214C7C570043329D /* Build configuration list for PBXProject */;
+			compatibilityVersion = "Xcode 14.0";
+			mainGroup = 00E2100F214C7C570043329D;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = ();
+		};
+		00E2100F214C7C570043329D = { isa = PBXGroup; children = (ContentView.swift, iosApp.swift); sourceTree = "<group>"; };
+		00E21013214C7C570043329D = { isa = XCConfigurationList; buildConfigurations = (); defaultConfigurationIsVisible = 0; };
 	};
 	rootObject = 00E21010214C7C570043329D /* Project object */;
 }
