@@ -157,31 +157,34 @@ class MainActivity : ComponentActivity() {
 
             // GPS, Trayecto y Clima
             LaunchedEffect(Unit) {
+                // Ejecutar inmediatamente una vez al inicio
                 obtenerCiudadGps(this@MainActivity) { ciudad ->
                     ciudadActual = ciudad
                     storage.saveCity(ciudad)
                 }
+                storage.getOfficeAddress()?.let { address ->
+                    calcularTiempoTrayecto(this@MainActivity, address) { tiempo -> 
+                        tiempoEstimado = tiempo 
+                    }
+                }
+
+                // Bucle de actualización periódica
                 while(true) {
                     val address = storage.getOfficeAddress()
                     if (address != null) {
                         calcularTiempoTrayecto(this@MainActivity, address) { tiempo -> tiempoEstimado = tiempo }
                     }
                     
-                    // Reintento del clima si falla
-                    var climaObtenido = false
-                    while(!climaObtenido) {
-                        obtenerClimaReal(this@MainActivity) { temp, icon ->
-                            if (temp != "--°C") {
-                                climaTemp = temp
-                                climaIcon = icon
-                                storage.saveNote("temp_cache", temp)
-                                storage.saveNote("icon_cache", icon)
-                                climaObtenido = true
-                            }
+                    obtenerClimaReal(this@MainActivity) { temp, icon ->
+                        if (temp != "--°C") {
+                            climaTemp = temp
+                            climaIcon = icon
+                            storage.saveNote("temp_cache", temp)
+                            storage.saveNote("icon_cache", icon)
                         }
-                        if (!climaObtenido) delay(10000) // Reintenta cada 10 seg si falla
                     }
-                    delay(600000) // Una vez obtenido, espera 10 min para actualizar
+                    
+                    delay(300000) // Actualizar cada 5 minutos
                 }
             }
         }

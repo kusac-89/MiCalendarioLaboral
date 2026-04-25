@@ -57,6 +57,8 @@ fun App(
     var showRouteConfirmDialog by remember { mutableStateOf(false) }
     var showAllTeamDialog by remember { mutableStateOf(false) }
     var showProfileMenu by remember { mutableStateOf(false) }
+    var showReminderDialog by remember { mutableStateOf(false) }
+    var reminderTextInput by remember { mutableStateOf("") }
     val scrollState = rememberScrollState()
     
     var showNameDialog by remember { mutableStateOf(storage.getUserName() == null || storage.getOfficeAddress() == null) }
@@ -231,11 +233,74 @@ fun App(
                         Button(onClick = { onUpdateStatus(selectedDate.toString(), "teletrabajo"); showMenuDialog = false }, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = ColorAccentGreen)) { Text("Teletrabajar", color = Color.Black) }
                         Spacer(Modifier.height(8.dp))
                         Button(onClick = { onUpdateStatus(selectedDate.toString(), "festivo"); showMenuDialog = false }, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = ColorDayOficina)) { Text("Indicar día Festivo", color = Color.White) }
-                        Spacer(Modifier.height(8.dp))
+                        
+                        Spacer(Modifier.height(16.dp))
+                        HorizontalDivider(color = Color(0x1AFFFFFF))
+                        Spacer(Modifier.height(16.dp))
+
+                        // Sección de Recordatorios
+                        val notaExistente = storage.getNote(selectedDate.toString())
+                        if (notaExistente != null) {
+                            Text("Nota: $notaExistente", color = Color.White, fontSize = 14.sp, modifier = Modifier.padding(bottom = 8.dp))
+                            Button(onClick = { onDeleteReminder(selectedDate.toString()); storage.removeNote(selectedDate.toString()); showMenuDialog = false }, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = Color.DarkGray)) {
+                                Icon(Icons.Default.Delete, null, tint = Color.White); Spacer(Modifier.width(8.dp)); Text("Borrar Recordatorio", color = Color.White)
+                            }
+                        } else {
+                            Button(onClick = { 
+                                reminderTextInput = ""
+                                showReminderDialog = true 
+                                showMenuDialog = false 
+                            }, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF5856D6))) {
+                                Icon(Icons.Default.Notifications, null, tint = Color.White); Spacer(Modifier.width(8.dp)); Text("Añadir Recordatorio", color = Color.White)
+                            }
+                        }
+
+                        Spacer(Modifier.height(16.dp))
                         TextButton(onClick = { onUpdateStatus(selectedDate.toString(), "limpiar"); showMenuDialog = false }, modifier = Modifier.fillMaxWidth()) { Text("Limpiar selección", color = Color.Gray) }
                     }
                 },
                 confirmButton = {}
+            )
+        }
+
+        if (showReminderDialog) {
+            AlertDialog(
+                onDismissRequest = { showReminderDialog = false },
+                containerColor = ColorBgCard,
+                title = { Text("Añadir Recordatorio", color = Color.White) },
+                text = {
+                    Column {
+                        Text("Escribe tu nota para el ${selectedDate.dayOfMonth}:", color = ColorTextSecondary, fontSize = 12.sp)
+                        Spacer(Modifier.height(8.dp))
+                        TextField(
+                            value = reminderTextInput,
+                            onValueChange = { reminderTextInput = it },
+                            modifier = Modifier.fillMaxWidth().heightIn(min = 100.dp),
+                            placeholder = { Text("Ej: Lista de la compra, reunión...", color = Color.Gray) },
+                            colors = TextFieldDefaults.colors(
+                                focusedContainerColor = ColorBgApp,
+                                unfocusedContainerColor = ColorBgApp,
+                                focusedTextColor = Color.White,
+                                unfocusedTextColor = Color.White
+                            )
+                        )
+                    }
+                },
+                confirmButton = {
+                    Button(
+                        onClick = {
+                            if (reminderTextInput.isNotBlank()) {
+                                onSetReminder(selectedDate.toString(), reminderTextInput)
+                                storage.saveNote(selectedDate.toString(), reminderTextInput)
+                            }
+                            showReminderDialog = false
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = ColorAccentGreen)
+                    ) { Text("Guardar", color = Color.Black) }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showReminderDialog = false }) { Text("Cancelar", color = Color.Gray) }
+                }
             )
         }
 
