@@ -10,7 +10,10 @@ class StorageManager(private val settings: Settings) {
     fun getCity(): String? = settings.getStringOrNull("ciudad_usuario")
 
     fun saveOfficeAddress(address: String) = settings.putString("oficina_usuario", address)
-    fun getOfficeAddress(): String? = settings.getStringOrNull("oficina_usuario")
+    fun getOfficeAddress(): String? = settings.getString("oficina_usuario", "C. Marie Curie, 17, 28521 Rivas-Vaciamadrid, Madrid")
+
+    fun saveHomeAddress(address: String) = settings.putString("casa_usuario", address)
+    fun getHomeAddress(): String? = settings.getStringOrNull("casa_usuario")
 
     fun saveDayType(day: String, type: String) = settings.putString("tipo_$day", type)
     fun getDayType(day: String): String? = settings.getStringOrNull("tipo_$day")

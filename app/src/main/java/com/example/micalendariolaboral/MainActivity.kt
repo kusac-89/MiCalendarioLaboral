@@ -287,20 +287,42 @@ fun obtenerCiudadGps(context: Context, onResult: (String) -> Unit) {
 
 @SuppressLint("MissingPermission")
 fun calcularTiempoTrayecto(context: Context, direccion: String, onResult: (String) -> Unit) {
+    val storage = StorageManager(SharedPreferencesSettings(context.getSharedPreferences("AgendaLaboral", Context.MODE_PRIVATE)))
     LocationServices.getFusedLocationProviderClient(context).lastLocation.addOnSuccessListener { loc ->
         if (loc != null) {
             try {
                 @Suppress("DEPRECATION")
-                val office = Geocoder(context, Locale.getDefault()).getFromLocationName(direccion, 1)?.firstOrNull()
+                val geocoder = Geocoder(context, Locale.getDefault())
+                
+                // Ubicaciones
+                val officeAddress = storage.getOfficeAddress() ?: "C. Marie Curie, 17, 28521 Rivas-Vaciamadrid, Madrid"
+                val homeAddress = storage.getHomeAddress() ?: ""
+                
+                val office = geocoder.getFromLocationName(officeAddress, 1)?.firstOrNull()
+                
                 if (office != null) {
                     val lat1 = loc.latitude; val lon1 = loc.longitude
                     val lat2 = office.latitude; val lon2 = office.longitude
-                    val dLat = Math.toRadians(lat2 - lat1); val dLon = Math.toRadians(lon2 - lon1)
-                    val a = sin(dLat / 2).pow(2) + cos(Math.toRadians(lat1)) * cos(Math.toRadians(lat2)) * sin(dLon / 2).pow(2)
-                    val c = 2 * atan2(sqrt(a), sqrt(1 - a))
-                    val distanciaKm = 6371.0 * c
-                    val tiempoEstimadoMin = (distanciaKm * 1.3).roundToInt() + 5
-                    onResult("$tiempoEstimadoMin min")
+                    
+                    // Distancia a la oficina (en grados aprox para rapidez)
+                    val distOficina = sqrt((lat1 - lat2).pow(2) + (lon1 - lon2).pow(2))
+                    
+                    // Si está a menos de ~200 metros de la oficina (aprox 0.002 grados)
+                    val destinoFinal = if (distOficina < 0.002 && homeAddress.isNotBlank()) homeAddress else officeAddress
+                    val esVueltaACasa = destinoFinal == homeAddress
+                    
+                    val target = if (esVueltaACasa) geocoder.getFromLocationName(homeAddress, 1)?.firstOrNull() else office
+                    
+                    if (target != null) {
+                        val dLat = Math.toRadians(target.latitude - lat1); val dLon = Math.toRadians(target.longitude - lon1)
+                        val a = sin(dLat / 2).pow(2) + cos(Math.toRadians(lat1)) * cos(Math.toRadians(target.latitude)) * sin(dLon / 2).pow(2)
+                        val c = 2 * atan2(sqrt(a), sqrt(1 - a))
+                        val distanciaKm = 6371.0 * c
+                        val tiempoEstimadoMin = (distanciaKm * 1.5).roundToInt() + 5
+                        
+                        val suffix = if (esVueltaACasa) " a casa" else " a oficina"
+                        onResult("$tiempoEstimadoMin min$suffix")
+                    } else onResult("-- min")
                 } else onResult("-- min")
             } catch (e: Exception) { onResult("Err") }
         }

@@ -58,7 +58,10 @@ fun App(
     var showAllTeamDialog by remember { mutableStateOf(false) }
     var showProfileMenu by remember { mutableStateOf(false) }
     var showReminderDialog by remember { mutableStateOf(false) }
+    var showAddressDialog by remember { mutableStateOf(false) }
     var reminderTextInput by remember { mutableStateOf("") }
+    var homeAddressInput by remember { mutableStateOf(storage.getHomeAddress() ?: "") }
+    var officeAddressInput by remember { mutableStateOf(storage.getOfficeAddress() ?: "") }
     val scrollState = rememberScrollState()
     
     var showNameDialog by remember { mutableStateOf(storage.getUserName() == null || storage.getOfficeAddress() == null) }
@@ -106,7 +109,16 @@ fun App(
                         // Tarjetas Info
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                             InfoCardStyled(modifier = Modifier.weight(1f), label = ciudadActual.uppercase(), value = climaTemp, subtitle = "Despejado", iconContent = { Text(climaIcon, fontSize = 28.sp) })
-                            InfoCardStyled(modifier = Modifier.weight(1f), label = "TRÁFICO A OFICINA", value = tiempoEstimado, subtitle = "Tráfico fluido", iconContent = { Icon(Icons.Default.Place, null, tint = ColorAccentGreen, modifier = Modifier.size(28.dp)) }, onClick = { showRouteConfirmDialog = true })
+                            
+                            val labelGps = if (tiempoEstimado.contains("casa", ignoreCase = true)) "TRÁFICO A CASA" else "TRÁFICO A OFICINA"
+                            InfoCardStyled(
+                                modifier = Modifier.weight(1f), 
+                                label = labelGps, 
+                                value = tiempoEstimado.replace("a casa", "").replace("a oficina", "").trim(), 
+                                subtitle = if (tiempoEstimado.contains("casa")) "Ruta al hogar" else "Ruta al trabajo", 
+                                iconContent = { Icon(Icons.Default.Place, null, tint = ColorAccentGreen, modifier = Modifier.size(28.dp)) }, 
+                                onClick = { showAddressDialog = true }
+                            )
                         }
 
                         Spacer(modifier = Modifier.height(20.dp))
@@ -300,6 +312,52 @@ fun App(
                 },
                 dismissButton = {
                     TextButton(onClick = { showReminderDialog = false }) { Text("Cancelar", color = Color.Gray) }
+                }
+            )
+        }
+
+        if (showAddressDialog) {
+            AlertDialog(
+                onDismissRequest = { showAddressDialog = false },
+                containerColor = ColorBgCard,
+                title = { Text("Configurar Direcciones", color = Color.White) },
+                text = {
+                    Column {
+                        Text("Tu Casa:", color = ColorTextSecondary, fontSize = 12.sp)
+                        TextField(
+                            value = homeAddressInput,
+                            onValueChange = { homeAddressInput = it },
+                            modifier = Modifier.fillMaxWidth(),
+                            placeholder = { Text("Ej: Calle Falsa 123, Madrid", color = Color.Gray) },
+                            colors = TextFieldDefaults.colors(focusedTextColor = Color.White, unfocusedTextColor = Color.White, focusedContainerColor = ColorBgApp, unfocusedContainerColor = ColorBgApp)
+                        )
+                        Spacer(Modifier.height(16.dp))
+                        Text("Oficina:", color = ColorTextSecondary, fontSize = 12.sp)
+                        TextField(
+                            value = officeAddressInput,
+                            onValueChange = { officeAddressInput = it },
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = TextFieldDefaults.colors(focusedTextColor = Color.White, unfocusedTextColor = Color.White, focusedContainerColor = ColorBgApp, unfocusedContainerColor = ColorBgApp)
+                        )
+                    }
+                },
+                confirmButton = {
+                    Button(
+                        onClick = {
+                            storage.saveHomeAddress(homeAddressInput)
+                            storage.saveOfficeAddress(officeAddressInput)
+                            showAddressDialog = false
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = ColorAccentGreen)
+                    ) { Text("Guardar", color = Color.Black) }
+                },
+                dismissButton = {
+                    TextButton(onClick = { 
+                        onOpenMaps(if (tiempoEstimado.contains("casa")) storage.getHomeAddress() ?: "" else storage.getOfficeAddress() ?: "")
+                        showAddressDialog = false 
+                    }) { 
+                        Text("Abrir en Maps", color = ColorAccentGreen) 
+                    }
                 }
             )
         }
