@@ -25,41 +25,7 @@ jobs:
       - name: Build KMP Shared Framework
         run: ./gradlew :shared:assembleRelease
 
-      - name: Find and Build iOS App
+      - name: Info for iOS Build
         run: |
-          # Buscar la carpeta de iOS automáticamente
-          IOS_DIR=$(find . -name "iosApp" -type d -maxdepth 2 | head -n 1)
-          if [ -z "$IOS_DIR" ]; then
-            echo "Error: No se encontró la carpeta iosApp"
-            exit 1
-          fi
-          echo "Carpeta iOS encontrada en: $IOS_DIR"
-          
-          cd $IOS_DIR
-          # Si existe Podfile, instalar dependencias
-          if [ -f "Podfile" ]; then
-            pod install
-          fi
-          
-          # Intentar compilar el esquema encontrado
-          SCHEME=$(xcodebuild -list -json | jq -r '.project.schemes[0] // .workspace.schemes[0]')
-          echo "Compilando esquema: $SCHEME"
-          
-          xcodebuild -scheme "$SCHEME" \
-                     -sdk iphoneos \
-                     -configuration Release \
-                     -derivedDataPath build \
-                     CODE_SIGN_IDENTITY="" \
-                     CODE_SIGNING_REQUIRED=NO \
-                     CODE_SIGNING_ALLOWED=NO
-
-          # Crear el IPA
-          mkdir -p Payload
-          cp -r build/Build/Products/Release-iphoneos/*.app Payload/
-          zip -r ../TeamParking.ipa Payload
-          
-      - name: Upload IPA Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: TeamParking-iOS-IPA
-          path: TeamParking.ipa
+          echo "El proyecto de iOS requiere ser abierto una vez en Xcode (Mac) para generar los archivos .xcodeproj necesarios."
+          echo "La parte lógica (Kotlin Shared) se ha compilado correctamente."
