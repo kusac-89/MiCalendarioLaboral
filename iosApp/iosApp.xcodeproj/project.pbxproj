@@ -1,0 +1,10 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {};
+	objectVersion = 56;
+	objects = {
+		/* ... Archivo de configuración básica para KMP ... */
+	};
+	rootObject = 00E21010214C7C570043329D /* Project object */;
+}
